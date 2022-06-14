@@ -1,0 +1,33 @@
+{
+  "name": "statez",
+  "version": "1.0.0",
+  "description": "Simple client-side state manager",
+  "type": "module",
+  "browser": "./dist/statez.js",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "node ./esbuild.config.js production",
+    "watch": "node ./esbuild.config.js development"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/craigbuckler/statez.git"
+  },
+  "bugs": {
+    "url": "https://github.com/craigbuckler/statez/issues"
+  },
+  "homepage": "https://github.com/craigbuckler/statez#readme",
+  "keywords": [
+    "client",
+    "browser",
+    "state",
+    "manager"
+  ],
+  "author": "Craig Buckler",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.14.43"
+  }
+}

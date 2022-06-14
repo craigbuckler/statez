@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>stateZ demonstration</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+body {
+  font-family: sans-serif;
+  font-size: 1em;
+  color: #222;
+  background-color: #fff;
+}
+</style>
+</head>
+<body>
+
+<h1>stateZ demonstration</h1>
+<p>See DevTools console log.</p>
+
+<script type="module">
+import { stateZ, stateZtype } from "./dist/statez.js";
+
+// page storage only
+const myStatePage = stateZ({ name: 'myStatePage', type: stateZtype.page, init: { x: 0, y: 0 } });
+
+logStateAll('____________\nmyStatePage initial:', myStatePage);
+
+myStatePage.addEventListener('change', logStateEvent);
+
+myStatePage.x = 1;
+myStatePage.y = 2;
+
+logStateAll('myStatePage now:', myStatePage);
+
+
+// session storage
+const myStateSession = stateZ({ name: 'myStateSession', type: stateZtype.session });
+const myStateSession2 = stateZ({ name: 'myStateSession' }); // same object
+
+logStateAll('____________\nmyStateSession initial:', myStateSession);
+
+myStateSession.addEventListener('change', logStateEvent);
+
+myStateSession.a = rnd();
+myStateSession.b = rnd();
+
+logStateAll('myStateSession2 now (same object as myStateSession):', myStateSession2);
+
+
+// permanent storage
+const myStatePermanent = stateZ({ name: 'myStatePermanent', type: stateZtype.permanent, init: { a: 1 }, sync: 1 });
+
+logStateAll('____________\nmyStatePermanent initial:', myStatePermanent);
+
+myStatePermanent.addEventListener('change', logStateEvent);
+
+myStatePermanent.a = myStatePermanent.a || 0;
+myStatePermanent.a++;
+//delete myStatePermanent.a;
+
+myStatePermanent.b = { c: 3 };
+myStatePermanent.b.c = rnd(); // no event
+
+myStatePermanent.d = [1,2,3];
+myStatePermanent.d.push(4); // no event
+
+logStateAll('myStatePermanent now:', myStatePermanent);
+
+
+// random value
+function rnd(lower = 1, upper = 5) {
+  return Math.floor(Math.random() * (upper - lower)) + lower;
+}
+
+// log all values
+function logStateAll(label, state) {
+
+  if (label) {
+    console.log(label);
+  }
+
+  for (let p in state) {
+    if (state.hasOwnProperty(p)) {
+      console.log(`  ${ p }: ${ JSON.stringify(state[p]) }`);
+    }
+  }
+}
+
+// log event
+function logStateEvent(e) {
+  console.log(`EVENT: property "${ e.detail.property }" updated from ${ JSON.stringify(e.detail.valueOld) } to ${ JSON.stringify(e.detail.value) }`);
+}
+</script>
+
+</body>
+</html>
