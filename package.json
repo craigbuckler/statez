@@ -1,6 +1,6 @@
 {
   "name": "statez",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simple client-side state manager",
   "type": "module",
   "browser": "./dist/statez.js",
@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "build": "node ./esbuild.config.js production",
-    "watch": "node ./esbuild.config.js development"
+    "start": "node ./esbuild.config.js development"
   },
   "repository": {
     "type": "git",
@@ -28,6 +28,6 @@
   "author": "Craig Buckler",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.14.43"
+    "esbuild": "^0.14.45"
   }
 }

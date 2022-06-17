@@ -22,13 +22,13 @@ class Target extends EventTarget {
   #TimerSync = null;
 
   // initialization
-  constructor(stateType, stateName, stateDefault, stateSync) {
+  constructor(stateType, stateName, stateDefault, stateSync = 0) {
 
     super();
 
     this.#StateName = stateName;
     this.#StateType = stateType && window[ stateType ];
-    this.#StateSync = (stateSync || 0) * 1000;
+    this.#StateSync = stateSync;
 
     if (this.#StateType) {
       stateDefault = JSON.parse( this.#StateType.getItem( stateName ) ) || stateDefault;
@@ -73,11 +73,9 @@ class Target extends EventTarget {
   // save and synchronize properties
   syncState() {
 
-    if (!this.#StateType) return;
-
-    const values = JSON.stringify( this );
-    if (values.length < 3) this.#StateType.removeItem( this.#StateName );
-    else this.#StateType.setItem( this.#StateName, values );
+    if (this.#StateType) {
+      this.#StateType.setItem( this.#StateName, JSON.stringify( this ) );
+    }
 
   }
 
@@ -187,10 +185,21 @@ window.addEventListener('storage', e => {
   const state = stateStore[ e.key ];
   if (state) {
 
-    const update = JSON.parse( e.newValue );
-    for (let p in update) {
-      if (JSON.stringify( state[p] ) != JSON.stringify( update[p] )) state[p] = update[p];
-    }
+    const
+      update = JSON.parse( e.newValue ),
+      prop = new Set([...Object.getOwnPropertyNames(state) ,...Object.getOwnPropertyNames(update)]);
+
+    prop.forEach(p => {
+
+      if (JSON.stringify( state[p] ) != JSON.stringify( update[p] )) {
+
+        if (typeof update[p] === 'undefined') delete state[p];
+        else state[p] = update[p];
+
+      }
+
+    });
+
   };
 
 });
@@ -199,9 +208,7 @@ window.addEventListener('storage', e => {
 // save on page unload
 window.addEventListener('beforeunload', () => {
 
-  for (let s in stateStore) {
-    stateStore[s].syncState();
-  }
+  Object.values(stateStore).forEach(ss => ss.syncState());
 
 });
 
