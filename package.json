@@ -1,15 +1,15 @@
 {
   "name": "statez",
-  "version": "1.0.1",
-  "description": "Simple client-side state manager",
+  "version": "2.0.0",
+  "description": "Simple client-side state manager with events, synchronization, and local storage",
   "type": "module",
   "browser": "./dist/statez.js",
   "files": [
     "dist/**/*"
   ],
   "scripts": {
-    "build": "node ./esbuild.config.js production",
-    "start": "node ./esbuild.config.js development"
+    "build": "node ./esbuild.config.js",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -23,11 +23,12 @@
     "client",
     "browser",
     "state",
-    "manager"
+    "manager",
+    "localStorage"
   ],
   "author": "Craig Buckler",
   "license": "MIT",
   "devDependencies": {
-    "esbuild": "^0.14.45"
+    "esbuild": "^0.19.2"
   }
 }

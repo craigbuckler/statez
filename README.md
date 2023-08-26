@@ -1,268 +1,327 @@
 # stateZ
 
-**stateZ** (state-easy) is a simple client-side state manager used to save values. Features:
+stateZ (state-easy) is a simple client-side state manager. Features:
 
 * simple to use, e.g. `myState.x = 1; console.log( myState.x );`
-* can store data for the [current page, current session, or permanently](#advanced-initialization)
-* [triggers events](#state-change-events) when any state changes
-* [synchronizes data](#advanced-initialization) across browser tabs
+* triggers events when a state changes
+* synchronizes data across browser tabs and windows on the same domain
 * vanilla JavaScript compatible with all frameworks
 * fast and lightweight - less than 2KB of code
+
+The stateZ version 2 API differs to version 1. Refer to [UPGRADE.md](https://github.com/craigbuckler/statez/blob/main/UPGRADE.md) for migration details.
 
 
 ## Compatibility
 
-**stateZ** works in modern browsers which support ES modules.
+stateZ works in modern browsers which support ES modules.
 
 
-## Basic use
+## stateZ comparison
+
+stateZ 2.0 works in a similar way to [stateZx](https://github.com/craigbuckler/statezx):
+
+| feature | stateZ | stateZx |
+|-|-|-|
+| code size| 2Kb | 4.5Kb |
+| storage | localStorage | indexedDB |
+| storage limit | typically 5MB | typically 1GB |
+| data types | stringified values | values, objects, blobs |
+| data lifetime | permanent | permanent |
+| performance | good, but synchronous storage | good with asynchronous storage |
+
+stateZ is a good option for web sites with minimal storage requirements. [stateZx](https://github.com/craigbuckler/statezx) may be preferable for complex web apps storing large amounts of data.
+
+
+## Installation
 
 Load the module from a CDN:
 
 ```js
-import { stateZ, stateZtype } from 'https://cdn.jsdelivr.net/npm/statez/dist/statez.js'
+import { stateZ } from 'https://cdn.jsdelivr.net/npm/statez/dist/statez.js';
 ```
 
-If using npm and a bundler, install the package:
+If using `npm` and a bundler, install with:
 
 ```sh
 npm install statez
 ```
 
-then import the module locally (path resolution will depend on the bundler):
+then import the module locally *(path resolution will depend on the bundler)*:
 
 ```js
-import { stateZ, stateZtype } from './node_modules/statez/dist/statez.js';
+import { stateZ } from './node_modules/statez/dist/statez.js';
 ```
 
-Create a named permanent state store:
+
+## Examples
+
+Create/access a named state store by passing an optional ID and initialization object:
 
 ```js
-// create state object
-const myState = stateZ({ name: 'myState' });
+const state = stateZ('myState', { a: 1, b: 2, c: 3 });
 ```
+
+Any state object on any page in any tab or window on the same domain which accesses the same `"myState"` store has access to the same properties. Previously-stored values initialize the properties. If `a` is not defined, the initialization object sets `state.a` to `1`.
 
 Set and retrieve values:
 
 ```js
 // set state
-myState.x = 123;
-myState.y = 'abc';
+state.x = 123;
+state.y = 'abc';
 
 // get state
-console.log( myState.x, myState.y ); // 123 abc
+console.log( state.x, state.y ); // 123 abc
 
 // output all properties
-for (let p in myState) {
-  console.log(`${ p }: ${ myState[p] }`);
+for (let p in state) {
+  console.log(`${ p }: ${ state[p] }`);
 }
 
 // delete state
-delete myState.x; // or
-myState.x = undefined;
+delete state.x; // or
+state.x = undefined;
 ```
 
-You can use the same state in any other script on the same domain to access the same values:
+Get the store name:
 
 ```js
-// another script
-function showState() {
+console.log( state.stateId ); // myState
+```
 
-  const s = stateZ({ name: 'myState' });
-  console.log( s.y ); // abc
+Run an event handler when any property changes:
+
+```js
+// event handler function
+function stateEventHandler(evt) {
+
+  const d = evt.detail;
+  console.log(`
+    ${ d.property } has changed
+    from ${ d.valueOld } to ${ d.value }
+    in store ${ d.store.stateId }
+    (event type "${ evt.type }")
+  `);
 
 }
 
-showState();
+// handle any state change
+state.addEventListener('*', stateEventHandler);
+```
+
+or when an individual property changes:
+
+```js
+// handle changes to state.a property
+state.addEventListener('a', stateEventHandler);
+```
+
+Example:
+
+```js
+state.a = 'one';
+
+/*
+both the "a" and "*" events trigger - ouput:
+a has changed from 1 to one in store myStore (event type "a")
+a has changed from 1 to one in store myStore (event type "*")
+*/
+
+state.b = 'two';
+
+/*
+the "*" event triggers - ouput:
+b has changed from 2 to two in store myStore (event type "*")
+*/
 ```
 
 
-## Advanced initialization
+## API reference
 
-Pass an initialization object to the `stateZ()` function with the following optional properties:
+Create/access a named store using the `stateZ` constructor with optional parameters:
 
-* `type`: the storage type.
-* `name`: a store name. All objects with the same `name` and `type` share the same data.
-* `init`: an initial object when no previous state is available.
-* `sync`: cross-tab [auto-synchronization](#state-synchronization) time in milliseconds.
+| name | type | description |
+|-|-|-|
+| `stateId` | string | state identifier (`stateZ` if not defined) |
+| `stateDefault` | object | initialization object |
 
-The storage `type` can be:
+The `stateId` can be any string, but do not use space or `.` characters.
 
-* `stateZtype.permanent` (default): permanent data shared across all browser tabs on the same domain which persists until the user wipes their browser cache.
-* `stateZtype.session`: temporary data which persists in the current tab and is wiped when it is closed.
-* `stateZtype.page`: temporary data which persists in the current page view and is wiped on a page refresh or tab close.
-
-When no `name` is specified, a default store is created for each `type`. The following stores are the same:
+The initialization object can contain any number of key/value pairs, e.g.
 
 ```js
-const s1 = stateZ();
-const s2 = stateZ();
+const state = stateZ('myState', {
+  a: 1,
+  b: 'two',
+  c: false,
+  xArray: [1,2,3],
+  yObject: { p1: 'prop1', p2: 'prop2' }
+});
 ```
 
-The following stores are different:
+stateZ uses previously-stored database values by default. Therefore, `state.a` is only set to `1` if it's initially `undefined` (or was stored as `1`). Setting a new value triggers events, stores it in localStorage, and synchronizes with other tabs/windows using stateZ on the same domain (which trigger their own events).
+
+
+### .stateId
+
+Returns the state identifier (read-only):
 
 ```js
-const s3 = stateZ({ type: stateZtype.permanent }); // identical to s1 and s2
-const s4 = stateZ({ type: stateZtype.session });
-const s4 = stateZ({ type: stateZtype.page });
-```
-
-The `init` object initializes the store when no previous data is available:
-
-```js
-const s = stateZ({ name: 'myState', init: { a: 1, b: 2, c: 3 } });
-
-console.log( s.a ); // 1 unless state was previously stored or set elsewhere
+console.log( state.stateId ); // myState
 ```
 
 
-## State synchronization
+### set, get, and delete properties
 
-Permanent and session state is automatically saved when the page unloads. Permanent state is synchronized to other tabs at that point but this may never occur on some long-running web pages.
-
-Setting `sync` to a non-zero value automatically synchronises **permanent** data stores to other browser tabs on the same domain where the same **stateZ** object is loaded:
+Set and get any property using a valid name and value:
 
 ```js
-const s = stateZ({ name: 'myState', sync: 3000 });
+state.prop1 = 'my first property';
+
+console.log( state.prop1 );     // my first property
+console.log( state['prop1'] );  // my first property
 ```
 
-Synchronizing larger states is an expensive operation. The `sync` value sets a (debounce) number of milliseconds to wait before synchronization occurs. The example above will synchronize no more than once every three seconds regardless of how many state values are updated.
-
-Alternatively, you can set `sync` to `0` (the default) and manually synchronize to other tabs using the `.syncState()` method:
+Delete a property:
 
 ```js
-const s = stateZ({ name: 'myState' });
-s.a = 1;
-s.b = 2;
+delete state.prop1;
+// or: delete state['prop1'];
+// or: state.prop1 = undefined;
+// or: state['prop1'] = undefined;
+console.log( state.prop1 );     // undefined
+```
 
-// synchronize now
-s.syncState();
+Delete all properties:
+
+```js
+for (let p in state) delete state[p];
+```
+
+Property:
+
+* *names* can contain letters in any case, numbers, or hyphens - but must start with a letter
+* *values* can be any value which can be [serialized](https://developer.mozilla.org/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) using `JSON.stringify()` - anything except for Symbol and functions. [Date() objects](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Date) are stringified so you may need to re-initialize after calling the stateZ constructor, e.g. `state.myDate = new Date( state.myDate );`
+
+Values are checked to ensure they've changed before triggering events, storage, and tab/window synchronization. Setting `state.a = 1` only has an effect when it's not already `1`.
+
+
+### Setting properties to objects or arrays
+
+Setting a property to an object or array will **always** trigger events, storage, and tab/window synchronization. This occurs because objects are passed by reference. Two objects or arrays are not the same even when their values are identical:
+
+```js
+console.log( state.myArray );   // [1,2,3]
+state.myArray = [1,2,3];        // triggers event, store, sync
+
+console.log( state.myObject );  // {a:1,b:2}
+state.myObject = {a:1,b:2};     // triggers event, store, sync
+```
+
+Setting a child property or array element will **not** trigger events, storage, and synchronization:
+
+```js
+state.myArray.push[4];  // not handled
+state.myObject.a = 99;  // not handled
+state.myObject.c = 100; // not handled
+```
+
+It may be preferable to update the whole object or create separate stateZ stores with native values rather than use nested arrays and objects.
+
+
+### .set(property, value)
+
+Sets temporary session-like values in the current tab. It does not trigger events, storage, and synchronization:
+
+```js
+// set value
+state.set('temp', 'temporary value');
+console.log(state.temp); // temporary value
+
+// delete value
+state.set('temp');
+console.log(state.temp); // undefined
 ```
 
 
-## Deleting state
+### State change events
 
-You can delete individual properties using:
+You can trigger event handler functions when **any** property changes:
 
 ```js
-delete myState.x
+// handle any state change
+state.addEventListener('*', stateEventHandler);
 ```
 
-Setting a property to `undefined` is identical:
+or when an individual property changes:
 
 ```js
-myState.x = undefined;
+// handle changes to state.myProp property
+state.addEventListener('myProp', stateEventHandler);
 ```
 
-Delete all properties using the `.cleanState()` method:
+Changes to `state.myProp` triggers both event handlers (the more specific `'myProp'` handler runs first).
+
+The handler function receives a single object containing information about the event. Its `.detail` property defines an object with the following properties:
+
+| property | description |
+|-|-|
+| `.property` | name of the updated property |
+| `.value` | the new value |
+| `.valueOld` | the old value |
+| `.state` | the state object |
+
+Example:
 
 ```js
-myState.cleanState();
-```
+// event handler function
+function stateEventHandler(evt) {
 
-An empty state still overrides any `init` object set when initializing.
+  const d = evt.detail;
+  console.log(`stateId       : ${ d.store.stateId }`);
+  console.log(`property name : ${ d.property }`);
+  console.log(`new value     : ${ d.value }`);
+  console.log(`previous value: ${ d.valueOld }`);
 
-
-## State change events
-
-You can trigger an event handler when a property value changes. This could be useful for data binding or similar activities.
-
-The event handler function receives an object with a `details` property that has the following child properties:
-
-* `.detail.property`: the name of the updated property
-* `.detail.value`: the new value (`undefined` when a property has been deleted)
-* `.detail.valueOld`: the previous value before the update
-* `.detail.state`: the **stateZ** object
-
-This example function logs state updates:
-
-```js
-// event handler
-function stateUpdate(e) {
-  console.log(`STATE UPDATE EVENT`);
-  console.log(`property name : ${ e.detail.property }`);
-  console.log(`updated value : ${ JSON.stringify(e.detail.value) }`);
-  console.log(`previous value: ${ JSON.stringify(e.detail.valueOld) }`);
 }
 ```
 
-It can be set as an event listener for any `statez` object using the `.addEventListener() ` method and a `'change'` trigger, e.g.
+A state change also triggers events on other tabs and windows that use stateZ with the same store on the same domain.
+
+Remove event handlers with the `.removeEventListener()` method:
 
 ```js
-const myState = stateZ({ name: 'myState', init: { x: 1 } });
-
-// add change listener
-myState.addEventListener('change', stateUpdate);
+state.removeEventListener('*', stateEventHandler);
+state.removeEventListener('myProp', stateEventHandler);
 ```
 
-The handler runs every time a property value is updated:
+
+### Event and synchronization lifecycle
+
+You can synchronously change and examine any stateZ object's properties in real time. There are no asynchronous operations.
+
+stateZ records all property changes. A later iteration of the JavaScript event loop triggers events, updates storage, and synchronizes across tabs/windows when the CPU is idle. Consider the following code:
 
 ```js
-myState.x = 1; // no change - no event triggered
+let counter = state.counter;
 
-myState.x = 2; // value changed
-// STATE UPDATE EVENT
-// property name : x
-// updated value : 2
-// previous value: 1
-
-myState.y = 'abc'; // new value
-// STATE UPDATE EVENT
-// property name : y
-// updated value : 'abc'
-// previous value: undefined
-
-delete myState.y; // value deleted
-// STATE UPDATE EVENT
-// property name : y
-// updated value : undefined
-// previous value: 'abc'
+for (let i = 0; i < 1000; i++) {
+  counter++;
+  state.counter = counter;
+}
 ```
 
-Remove a handler with `.removeEventListener()`:
+The code will **not** trigger 1,000 event, storage, and synchronization processes. If `state.counter` is initially stored as `0`, the synchronous loop will complete and it's value changes to `1000`. The update process runs at some future point which:
 
-```js
-myState.removeEventListener('change', stateUpdate);
-```
+1. triggers local events where the `details` object has `.property` set to `'counter'`, `.oldValue` set to `0`, and `.value` set to `1000`
 
-Handler events are also triggered on **other** tabs when [synchronizing state](#state-synchronization).
+1. updates `counter` in localStorage to change the value from `0` to `1000`. This triggers a `localStorage` event on all tabs/windows on the same domain using stateZ which triggers identical events.
 
-Be wary about unconditionally changing states in an event handler. You could trigger an infinite cascade of change and synchronization events.
-
-
-## Nested objects and arrays
-
-You can set a **stateZ** property to an array or object:
-
-```js
-myState.arr = [1, 2, 3];
-
-myState.obj = {
-  x: 1,
-  y: [2,2]
-  z: { a: 3, b: 4 }
-};
-```
-
-This triggers change events. Setting the same value again will also trigger an event: the values may be identical but the object is different:
-
-```js
-myState.arr = [1, 2, 3]; // change event triggered
-```
-
-However, setting a child property or array item will **not** trigger a change event:
-
-```js
-myState.obj.x = 2;      // no change event
-myState.obj.y.push(3);  // no change event
-myState.obj.z.b = 5;    // no change event
-```
-
-It may be preferable to create a new named **stateZ** object with native values rather than use nested arrays or objects.
+Intensive state changes do not have a significant impact on performance because stateZ makes background updates when the program is idle. Nothing would run if `state.counter = 0;` was added after the loop!
 
 
 ## Usage policy
 
 You are free to use this as you like but please do not republish it as your own work.
 
-Please consider [sponsorship](https://github.com/sponsors/craigbuckler) if you use **stateZ** commercially, require support, or need new features.
+Please consider [sponsorship](https://github.com/sponsors/craigbuckler) if you use **stateZ** commercially, require support, or want new features.
