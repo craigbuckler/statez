@@ -1,21 +1,16 @@
-// esbuild configuration
-import { argv } from 'node:process';
-import esbuild from 'esbuild';
+import * as esbuild from 'esbuild';
 import pkg from './package.json' assert {type: 'json'};
 
-const productionMode = ('development' !== (argv[2] || process.env.NODE_ENV));
-
-// minified build
-esbuild.build({
-
+await esbuild.build({
   entryPoints: [ './src/statez.js' ],
-  platform: 'browser',
   format: 'esm',
+  platform: 'browser',
   bundle: true,
-  minify: productionMode,
-  sourcemap: !productionMode && 'linked',
-  banner: { js: `/* ${ pkg.name } ${ pkg.version }, by ${ pkg.author }, ${ (new Date()).toISOString().slice(0,-8) } */` },
-  outfile: './dist/statez.js',
-  watch: !productionMode
-
-}).catch(() => process.exit(1));
+  target: 'chrome100,firefox100,safari15'.split(','),
+  drop: ['debugger', 'console'],
+  banner: { js: `/*\n${ pkg.name } ${ pkg.version } - ${ pkg.description }\n${ pkg.homepage }\n${ pkg.author }, ${ (new Date()).toISOString().slice(0,10) }\n*/` },
+  logLevel: 'error',
+  minify: true,
+  sourcemap: false,
+  outdir: './dist/'
+});
